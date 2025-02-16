@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { max-width: 600px; margin: 20px auto; }
+        table { width: 80%; margin: auto; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h2>Real-Time System Monitoring Dashboard</h2>
+
+    <canvas id="cpuChart"></canvas>
+    <canvas id="memoryChart"></canvas>
+    <canvas id="diskChart"></canvas>
+
+    <h3>Past Records</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>CPU (%)</th>
+                <th>Memory (%)</th>
+                <th>Disk (%)</th>
+            </tr>
+        </thead>
+        <tbody id="metricsTable"></tbody>
+    </table>
+
+    <script>
+        async function fetchMetrics() {
+            const response = await fetch('/metrics');
+            const data = await response.json();
+
+            let labels = [];
+            let cpuData = [];
+            let memoryData = [];
+            let diskData = [];
+            let tableRows = '';
+
+            data.reverse().forEach(metric => {
+                labels.push(metric.timestamp);
+                cpuData.push(metric.cpu);
+                memoryData.push(metric.memory);
+                diskData.push(metric.disk);
+
+                tableRows += `<tr>
+                    <td>${metric.timestamp}</td>
+                    <td>${metric.cpu}</td>
+                    <td>${metric.memory}</td>
+                    <td>${metric.disk}</td>
+                </tr>`;
+            });
+
+            document.getElementById('metricsTable').innerHTML = tableRows;
+
+            updateChart(cpuChart, labels, cpuData);
+            updateChart(memoryChart, labels, memoryData);
+            updateChart(diskChart, labels, diskData);
+        }
+
+        function createChart(ctx, label) {
+            return new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: label, data: [], borderColor: 'blue', fill: false }] },
+                options: { responsive: true, scales: { x: { display: false }, y: { beginAtZero: true } } }
+            });
+        }
+
+        function updateChart(chart, labels, data) {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.update();
+        }
+
+        const cpuChart = createChart(document.getElementById('cpuChart').getContext('2d'), 'CPU Usage (%)');
+        const memoryChart = createChart(document.getElementById('memoryChart').getContext('2d'), 'Memory Usage (%)');
+        const diskChart = createChart(document.getElementById('diskChart').getContext('2d'), 'Disk Usage (%)');
+
+        setInterval(fetchMetrics, 5000);
+    </script>
+</body>
+</html>
